@@ -1,3 +1,5 @@
+!FULLY AI!
+
 # Aviator — Flight & Crash
 
 A complete 3D arcade flight game for the browser. Fly a physically simulated aircraft over endless
