@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1424">
+  <title>Aviator — Flight &amp; Crash</title>
+  <meta name="description" content="A 3D arcade flight game with a provably-fair crash round, a 14-mission campaign and a free-flight sandbox. Play money only.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="stage"></div>
+
+  <!-- Loading -->
+  <section id="screen-loading" class="screen visible" aria-live="polite">
+    <div class="loading-box">
+      <div class="logo">AVIATOR<span>✈</span></div>
+      <div class="progress"><div class="progress-fill" id="load-fill"></div></div>
+      <p id="load-text">Loading…</p>
+    </div>
+  </section>
+
+  <!-- Main menu -->
+  <section id="screen-menu" class="screen">
+    <div class="menu-wrap">
+      <h1 class="logo">AVIATOR<span>✈</span></h1>
+      <p class="tagline">Fly it. Bet it. Land it.</p>
+      <nav class="menu-buttons" aria-label="Main menu">
+        <button class="btn btn-primary" data-goto="crash"><b>Play</b><small>Crash round · play money</small></button>
+        <button class="btn" data-goto="campaignSelect"><b>Campaign</b><small id="menu-campaign-sub">14 missions</small></button>
+        <button class="btn" data-goto="freeflight"><b>Free Flight</b><small>Weather, time, photo mode</small></button>
+        <button class="btn" data-goto="hangar"><b>Hangar</b><small>Aircraft, paint, upgrades</small></button>
+        <button class="btn" data-goto="planeBuilder"><b>Plane Builder</b><small>Build your own aircraft</small></button>
+        <button class="btn" data-goto="mapBuilder"><b>Map Builder</b><small>Make courses to fly</small></button>
+        <button class="btn" data-goto="settings"><b>Settings</b><small>Audio, controls, graphics</small></button>
+        <button class="btn" data-goto="credits"><b>Credits</b><small>About this game</small></button>
+      </nav>
+      <div class="menu-stats" id="menu-stats"></div>
+      <div class="menu-footer">Play money only — no real-money wagering. v1.0</div>
+    </div>
+  </section>
+
+  <!-- Campaign select -->
+  <section id="screen-campaignSelect" class="screen panel-screen">
+    <div class="panel wide">
+      <header class="panel-head"><h2>Campaign</h2><div class="pill" id="camp-stars"></div><button class="btn btn-small" data-back>Back</button></header>
+      <div class="chapter-tabs" id="chapter-tabs" role="tablist"></div>
+      <p class="chapter-blurb" id="chapter-blurb"></p>
+      <div class="mission-grid" id="mission-grid"></div>
+    </div>
+  </section>
+
+  <!-- Hangar -->
+  <section id="screen-hangar" class="screen hangar-screen">
+    <div class="panel hangar-left">
+      <header class="panel-head"><h2>Hangar</h2><div class="pill coin-pill" id="hangar-coins"></div><button class="btn btn-small" data-back>Back</button></header>
+      <div id="aircraft-list" class="aircraft-list"></div>
+    </div>
+    <div class="panel hangar-right">
+      <h3 id="hangar-name"></h3>
+      <p id="hangar-role" class="muted"></p>
+      <div id="hangar-stats" class="stat-bars"></div>
+      <h4>Paint scheme</h4>
+      <div id="paint-list" class="paint-list"></div>
+      <h4>Upgrades <small class="muted">(all aircraft)</small></h4>
+      <div id="upgrade-list" class="upgrade-list"></div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="screen-settings" class="screen panel-screen">
+    <div class="panel wide">
+      <header class="panel-head"><h2>Settings</h2><button class="btn btn-small" data-back>Done</button></header>
+      <div class="tabs" id="settings-tabs" role="tablist"></div>
+      <div id="settings-body" class="settings-body"></div>
+    </div>
+  </section>
+
+  <!-- Credits -->
+  <section id="screen-credits" class="screen panel-screen">
+    <div class="panel">
+      <header class="panel-head"><h2>Credits</h2><button class="btn btn-small" data-back>Back</button></header>
+      <div class="credits">
+        <p><b>Aviator</b> is a browser flight game built with <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> r160 and vanilla JavaScript.</p>
+        <p>Everything you see and hear is generated at runtime: terrain, clouds, aircraft, effects, engine sound and music. There are no image or audio files.</p>
+        <p>Flight model: rigid-body 6-DOF with lift, drag (parasitic + induced), side force, propeller thrust, stall, spin, ground contact and damage.</p>
+        <p>The crash round uses a provably-fair, seeded SHA-256 scheme. <b>All balances are play money</b> and have no value.</p>
+        <p class="muted">Design, code and procedural art: generated for this project. Thanks for flying!</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden" aria-hidden="true">
+    <canvas id="hud-compass" width="420" height="44"></canvas>
+    <div id="hud-title"></div>
+    <div class="hud-box hud-speed"><label>SPD</label><span id="hud-spd">0</span><small>km/h</small></div>
+    <div class="hud-box hud-alt"><label>ALT</label><span id="hud-alt">0</span><small>m</small><div class="hud-sub" id="hud-vs"></div></div>
+    <div class="hud-attitude"><canvas id="hud-horizon" width="200" height="200"></canvas></div>
+    <div class="hud-throttle">
+      <div class="thr-bar"><div class="thr-fill" id="hud-thr"></div></div>
+      <div class="thr-label" id="hud-thr-txt">0%</div>
+      <div class="hud-flags">
+        <span id="flag-gear">GEAR</span><span id="flag-flaps">FLAP 0</span><span id="flag-brake">BRK</span><span id="flag-fuel" class="hidden">FUEL</span>
+      </div>
+      <div class="hud-g" id="hud-g">1.0 G</div>
+      <div class="dmg-bar" title="Hull damage"><div id="hud-dmg"></div></div>
+    </div>
+    <div class="hud-minimap"><canvas id="hud-map" width="200" height="200"></canvas></div>
+    <div id="hud-objectives" class="hud-objectives"></div>
+    <div id="hud-warn" class="hud-warn"></div>
+    <div id="hud-markers"></div>
+  </div>
+  <div id="banner"></div>
+
+  <!-- Crash round UI -->
+  <div id="crash-ui" class="hidden">
+    <div class="crash-top">
+      <div class="history" id="crash-history" aria-label="Recent crash points"></div>
+      <button class="btn btn-small" id="btn-verify" title="Provably fair — verify rounds">Fair ✓</button>
+    </div>
+    <div class="crash-center">
+      <div id="crash-mult" class="mult">1.00×</div>
+      <div id="crash-status" class="crash-status"></div>
+      <div class="bet-timer"><div id="crash-timer-fill"></div></div>
+      <div id="crash-hash" class="crash-hash"></div>
+    </div>
+    <div class="crash-bottom">
+      <div class="bet-slot" data-slot="0"></div>
+      <div class="balance-box">
+        <label>Balance</label><b id="crash-balance">0</b><small>play money</small>
+        <button class="btn btn-small hidden" id="btn-topup">Top up</button>
+      </div>
+      <div class="bet-slot" data-slot="1"></div>
+    </div>
+  </div>
+
+  <!-- Free-flight panel -->
+  <div id="ff-panel" class="panel ff-panel hidden">
+    <header class="panel-head"><h3>Free Flight</h3><button class="btn btn-small" id="ff-close">Close (M)</button></header>
+    <div class="ff-grid">
+      <label>Weather <select id="ff-weather"><option value="clear">Clear</option><option value="cloudy">Cloudy</option><option value="storm">Storm</option></select></label>
+      <label>Time of day <input type="range" id="ff-time" min="0" max="24" step="0.1"><output id="ff-time-out"></output></label>
+      <label>Time speed <select id="ff-timespeed"><option value="0">Frozen</option><option value="0.011">Normal</option><option value="0.1">Fast</option><option value="1">Very fast</option></select></label>
+      <label>Wind speed <input type="range" id="ff-wind" min="0" max="25" step="1"><output id="ff-wind-out"></output></label>
+      <label>Wind from <input type="range" id="ff-winddir" min="0" max="359" step="1"><output id="ff-winddir-out"></output></label>
+    </div>
+    <h4 id="ff-map-title">Map — click a landmark to fly there</h4>
+    <canvas id="ff-map" width="320" height="320"></canvas>
+    <div id="ff-landmarks" class="ff-landmarks"></div>
+    <h4>Custom maps</h4>
+    <div id="ff-maps" class="ff-landmarks"></div>
+    <div class="ff-actions">
+      <button class="btn btn-small" id="ff-runway">Respawn at start</button>
+      <button class="btn btn-small" id="ff-photo">Photo mode (P)</button>
+    </div>
+  </div>
+
+  <!-- Photo mode -->
+  <div id="photo-ui" class="hidden">
+    <span>Photo mode — drag to orbit, scroll to zoom</span>
+    <button class="btn btn-small" id="photo-save">Save PNG</button>
+    <button class="btn btn-small" id="photo-exit">Exit (P)</button>
+  </div>
+
+  <!-- Cards & modals -->
+  <div id="card-briefing" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="brief-title">
+    <div class="card">
+      <div class="card-kicker" id="brief-kicker"></div>
+      <h2 id="brief-title"></h2>
+      <p id="brief-text"></p>
+      <div class="brief-stars" id="brief-stars"></div>
+      <div class="brief-row"><label>Aircraft <select id="brief-aircraft"></select></label><span class="muted" id="brief-best"></span></div>
+      <div class="card-actions"><button class="btn" id="brief-back">Back</button><button class="btn btn-primary" id="brief-start">Start mission</button></div>
+    </div>
+  </div>
+
+  <div id="card-result" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <div class="card">
+      <div class="card-kicker" id="result-kicker"></div>
+      <h2 id="result-title"></h2>
+      <div class="result-stars" id="result-stars"></div>
+      <p id="result-reason" class="muted"></p>
+      <div class="result-rows" id="result-rows"></div>
+      <div class="result-unlocks" id="result-unlocks"></div>
+      <div class="card-actions"><button class="btn" id="result-menu">Missions</button><button class="btn" id="result-retry">Retry</button><button class="btn btn-primary" id="result-next">Next</button></div>
+    </div>
+  </div>
+
+  <div id="pause-menu" class="modal hidden" role="dialog" aria-modal="true" aria-label="Paused">
+    <div class="card small-card">
+      <h2>Paused</h2>
+      <div class="pause-buttons">
+        <button class="btn btn-primary" id="pause-resume">Resume</button>
+        <button class="btn" id="pause-restart">Restart</button>
+        <button class="btn" id="pause-settings">Settings</button>
+        <button class="btn" id="pause-quit">Quit to menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="verify-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="verify-title">
+    <div class="card wide-card">
+      <h2 id="verify-title">Provably fair</h2>
+      <p class="muted">Before each round you see <b>hash = SHA-256(seed)</b>. After the crash the seed is revealed.
+        The crash point is <code>floor(100·(1−edge)/(1−r))/100</code> where <code>r</code> is the first 52 bits of <code>SHA-256(seed:clientSeed)</code> ÷ 2⁵².
+        Seeds come from a seeded chain: <code>seed = SHA-256(masterSeed:nonce)</code>.</p>
+      <div class="verify-row">
+        <label>Client seed <input id="verify-client" maxlength="64"></label>
+        <button class="btn btn-small" id="verify-client-save">Save</button>
+        <button class="btn btn-small" id="verify-rotate">New master seed</button>
+      </div>
+      <div class="verify-row">
+        <label>Check a seed <input id="verify-seed" placeholder="paste a revealed round seed"></label>
+        <button class="btn btn-small" id="verify-check">Verify</button>
+      </div>
+      <div id="verify-out" class="verify-out"></div>
+      <div class="verify-table" id="verify-table"></div>
+      <div class="card-actions"><button class="btn btn-primary" id="verify-close">Close</button></div>
+    </div>
+  </div>
+
+  <div id="confirm-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="card small-card">
+      <h2 id="confirm-title">Are you sure?</h2>
+      <p id="confirm-text"></p>
+      <div class="card-actions"><button class="btn" id="confirm-no">Cancel</button><button class="btn btn-danger" id="confirm-yes">Confirm</button></div>
+    </div>
+  </div>
+
+  <div id="context-lost" class="modal hidden" role="alertdialog" aria-modal="true">
+    <div class="card small-card">
+      <h2>Graphics context lost</h2>
+      <p>The browser reset the WebGL context (often caused by a GPU driver hiccup or too many tabs). Your progress is saved.</p>
+      <div class="card-actions"><button class="btn btn-primary" onclick="location.reload()">Reload game</button></div>
+    </div>
+  </div>
+
+  <!-- Plane Builder / Map Builder overlay (built by the editor modes) -->
+  <div id="editor-ui" class="ed-root hidden"></div>
+  <button id="btn-back-editor" class="btn btn-primary hidden" type="button">◀ Back to editor</button>
+
+  <div id="toasts" aria-live="polite"></div>
+  <div id="fader"></div>
+  <div id="fps" class="hidden"></div>
+
+  <!-- Touch controls (shown on touch devices during flight) -->
+  <div id="touch-controls">
+    <div class="touch-stick"><div class="touch-knob"></div></div>
+    <div class="touch-buttons">
+      <button data-touch-action="gear">GEAR</button>
+      <button data-touch-action="flaps">FLAP</button>
+      <button data-touch-action="brake">BRK</button>
+      <button data-touch-action="camera">CAM</button>
+      <button data-touch-action="pause">❚❚</button>
+    </div>
+    <div class="touch-throttle"><div class="touch-throttle-fill"></div><span>THR</span></div>
+  </div>
+
+  <noscript><div class="noscript">This game needs JavaScript enabled.</div></noscript>
+
+  <!-- three.js r160 (last release that ships a classic, non-module build) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.1/three.min.js" integrity="sha512-vnmn/Qqn6aG0POAc9mIGzjq0IybrvxJXYDafNvp9JSnDGxeF3pbkSqLvf+YGd5ku63pT7sa/jxHn7/d0mU8+tA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/physics.js"></script>
+  <script src="js/economy.js"></script>
+  <script src="js/mapformat.js"></script>
+  <script src="js/campaign.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/aircraft.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/modes.js"></script>
+  <script src="js/editorcore.js"></script>
+  <script src="js/planebuilder.js"></script>
+  <script src="js/mapbuilder.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
